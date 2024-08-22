@@ -20,14 +20,14 @@ describe("CCNS", function () {
         } = await ccipLocalSimulator.configuration();
 
         // Instance of CrossChainNameServiceLookup.sol on Receiver
-        const ccnsLookupFactory = await hre.ethers.getContractFactory("CrossChainNameServiceLookup");
-        const ccnsLookup = await ccnsLookupFactory.deploy();
-        console.log("CCNSLookup Address (receiver): ", ccnsLookup.address)
+        const ccnsLookupReceiverFactory = await hre.ethers.getContractFactory("CrossChainNameServiceLookup");
+        const ccnsLookupReceiver = await ccnsLookupReceiverFactory.deploy();
+        console.log("CCNSLookupReceiver Address (receiver): ", ccnsLookupReceiver.address)
         
         // Instance of CrossChainNameServiceLookup.sol on Source
         const ccnsLookupSourceFactory = await hre.ethers.getContractFactory("CrossChainNameServiceLookup");
         const ccnsLookupSource = await ccnsLookupSourceFactory.deploy();
-        console.log("CCNSLookup Address (source): ", ccnsLookupSource.address)
+        console.log("CCNSLookupReceiver Address (source): ", ccnsLookupSource.address)
         
         // Instance of CrossChainNameServiceRegister.sol
         const crossChainNameServiceRegisterFactory = await hre.ethers.getContractFactory("CrossChainNameServiceRegister");
@@ -36,31 +36,24 @@ describe("CCNS", function () {
         
         // Instance of CrossChainNameServiceReceiver.sol
         const crossChainNameServiceReceiverFactory = await hre.ethers.getContractFactory("CrossChainNameServiceReceiver");
-        const crossChainNameServiceReceiver = await crossChainNameServiceReceiverFactory.deploy(config.destinationRouter_, ccnsLookup.address, config.chainSelector_);
+        const crossChainNameServiceReceiver = await crossChainNameServiceReceiverFactory.deploy(config.destinationRouter_, ccnsLookupReceiver.address, config.chainSelector_);
         console.log("CCNSReceiver Address: ", crossChainNameServiceReceiver.address)
         
 
         // calling the enableChain()
-        await crossChainNameServiceRegister.enableChain(config.chainSelector_, crossChainNameServiceReceiver.address, 200_000n);
+        await crossChainNameServiceRegister.enableChain(config.chainSelector_, crossChainNameServiceReceiver.address, 200_000);
         
-        // await ccipLocalSimulator.requestLinkFromFaucet(crossChainNameServiceRegister.address, 5_000_000_000_000_000_000n);
-        return { ccipLocalSimulator, ccnsLookup, ccnsLookupSource, crossChainNameServiceReceiver, crossChainNameServiceRegister, alice }
+        return { ccipLocalSimulator, ccnsLookupReceiver, ccnsLookupSource, crossChainNameServiceReceiver, crossChainNameServiceRegister, alice }
 
     }
 
-    describe("Deploying", async function () {
-        it("Should Register alice.ccns and assert its owner", async function () {
-            const { alice, ccnsLookup, ccnsLookupSource, crossChainNameServiceReceiver, crossChainNameServiceRegister } = await loadFixture(deploy)
-            await ccnsLookupSource.setCrossChainNameServiceAddress(crossChainNameServiceRegister.address);
-            await ccnsLookup.setCrossChainNameServiceAddress(crossChainNameServiceReceiver.address);
-            
-            await crossChainNameServiceRegister.connect(alice).register("alice.ccns")
+    it("Should Register alice.ccns and assert its owner", async function () {
+        const { alice, ccnsLookupReceiver, ccnsLookupSource, crossChainNameServiceReceiver, crossChainNameServiceRegister } = await loadFixture(deploy)
+        await ccnsLookupSource.setCrossChainNameServiceAddress(crossChainNameServiceRegister.address);
+        await ccnsLookupReceiver.setCrossChainNameServiceAddress(crossChainNameServiceReceiver.address);
+        
+        await crossChainNameServiceRegister.connect(alice).register("alice.ccns")
 
-            expect(await ccnsLookup.lookup("alice.ccns")).to.equal(alice.address)
-        })
-        // it("Should Register alice.ccns and assert its owner", async function () {
-        //     const { alice, crossChainNameServiceRegister, ccnsLookupSource } = await loadFixture(deploy);
-        // })
-
+        expect(await ccnsLookupReceiver.lookup("alice.ccns")).to.equal(alice.address)
     })
 })
